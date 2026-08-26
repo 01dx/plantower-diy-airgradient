@@ -19,7 +19,7 @@ This is a small CC BY-SA 4.0 derivative of [AirGradient DIY BASIC](https://githu
 2. [Flash](docs/flash.md) the `.bin` once over USB.
 3. Join the board hotspot and enter home Wi-Fi. Details: [setup](docs/setup.md).
 4. On **Network**, save nearby latitude/longitude for Open-Meteo.
-5. Register the serial in AirGradient and turn on [calibration / sharing](docs/airgradient.md).
+5. Register the serial in AirGradient and turn on [calibration / sharing](docs/airgradient.md). In the dashboard, **EPA 2021** is the humidity correction for PM2.5 — use that. Leave PMS5003T temperature/humidity correction off.
 
 ```text
 PMS5003  --5V/GND/D5/D6-->  NodeMCU  --Wi-Fi-->  AirGradient

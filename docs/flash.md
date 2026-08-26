@@ -19,7 +19,7 @@ On Windows look in Device Manager for COM3, COM4, and similar. On Linux look for
 4. Flash the image from `releases/PlantowerAirGradientPortal.bin`:
 
 ```zsh
-python3 -m esptool --chip esp8266 --port /dev/cu.usbserial-120 write_flash -fm dio 0x0 releases/PlantowerAirGradientPortal.bin
+python3 -m esptool --chip esp8266 --port /dev/cu.usbserial-XXXX write_flash -fm dio 0x0 releases/PlantowerAirGradientPortal.bin
 ```
 
 Replace the port with yours. Do not hold FLASH unless the upload fails to connect.
@@ -39,7 +39,7 @@ Needs [Arduino CLI](https://arduino.github.io/arduino-cli/) and the ESP8266 core
 Pass a port to compile and upload:
 
 ```zsh
-./scripts/flash.sh /dev/cu.usbserial-120
+./scripts/flash.sh /dev/cu.usbserial-XXXX
 ```
 
 The script downloads AirGradient Arduino **3.7.0**, applies the small library patches in `firmware/library-patches/`, and builds `firmware/PlantowerAirGradientPortal`.

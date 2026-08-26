@@ -33,7 +33,7 @@ The local Readings page also shows those raw PM values. It does not replace the 
 
 ## PM2.5 calibration
 
-AirGradient can apply a Plantower batch SLR (scaling) and the US EPA 2021 humidity correction.
+AirGradient has **two different humidity-related toggles**. Use the first. Leave the second off.
 
 ### 1. Batch / SLR correction
 
@@ -49,22 +49,22 @@ If your batch is different, use the matching AirGradient preset. Do not invent a
 
 This SLR can be on even before humidity is available.
 
-### 2. EPA 2021 correction (needs humidity)
+### 2. EPA 2021 PM2.5 correction — turn this on
 
-EPA correction uses relative humidity. Enable **`useEpa2021`** only after the board is uploading real `rhum` (Open-Meteo location saved, or a future onboard sensor).
+This **is** the humidity correction in the AirGradient panel (`useEpa2021`). It uses uploaded `rhum` to adjust **PM2.5**, not to rewrite the humidity number.
 
-Until humidity is present, leave EPA off. A fake indoor 70% value will skew outdoor numbers.
+Enable it once the board is sending real `rhum` (Open-Meteo location saved, or a future onboard sensor). Until then, leave EPA off so AirGradient does not invent an indoor 70% RH.
 
 In humid climates the EPA step often lowers reported PM2.5 a lot. Example at 70% RH:
 
 - Raw 35 µg/m³ → about 20 µg/m³ corrected
 - Raw 20 µg/m³ → about 10 µg/m³ corrected
 
-### 3. Temperature / humidity correction
+### 3. Temperature / humidity *sensor* correction — leave this off
 
-Set temperature and humidity correction to **none**.
+This is a **separate** dashboard setting. It tries to correct the temperature and humidity values themselves, as if they came from a Plantower **PMS5003T** (a different sensor with its own humidity chip).
 
-Do **not** enable `ag_pms5003t_2024` or other PMS5003T formulas. Those assume a Plantower humidity chip this build does not have. Applying them to Open-Meteo RH can clamp humidity to 100%.
+This build does not have that chip. Humidity comes from Open-Meteo. Set T/H correction to **none**. Do **not** enable `ag_pms5003t_2024`. Applying that formula to weather-API RH can clamp humidity to 100%, and then EPA uses the wrong RH.
 
 ## Where corrected values appear
 

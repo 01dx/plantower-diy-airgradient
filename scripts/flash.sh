@@ -7,7 +7,8 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 sketch="$root/firmware/PlantowerAirGradientPortal"
 build="$root/build/PlantowerAirGradientPortal"
 vendor="$root/.arduino"
-ag_lib="$vendor/AirGradient"
+ag_root="$vendor/official"
+ag_lib="$ag_root/arduino-master"
 ag_version="${AIRGRADIENT_ARDUINO_VERSION:-3.7.0}"
 ag_url="https://github.com/airgradienthq/arduino/archive/refs/tags/${ag_version}.tar.gz"
 
@@ -37,10 +38,12 @@ fi
 
 if [[ ! -f "$ag_lib/library.properties" ]]; then
   echo "Downloading AirGradient Arduino ${ag_version}..."
-  mkdir -p "$vendor"
-  curl -fsSL "$ag_url" | tar -xz -C "$vendor"
+  mkdir -p "$ag_root"
+  tmpdir="$(mktemp -d)"
+  curl -fsSL "$ag_url" | tar -xz -C "$tmpdir"
   rm -rf "$ag_lib"
-  mv "$vendor/arduino-${ag_version}" "$ag_lib"
+  mv "$tmpdir/arduino-${ag_version}" "$ag_lib"
+  rmdir "$tmpdir" 2>/dev/null || rm -rf "$tmpdir"
 fi
 
 echo "Applying library patches..."
@@ -50,25 +53,22 @@ cp "$root/firmware/library-patches/AgConfigure.h" "$ag_lib/src/AgConfigure.h"
 cp "$root/firmware/library-patches/AgWiFiConnector.cpp" "$ag_lib/src/AgWiFiConnector.cpp"
 cp "$root/firmware/library-patches/AgOledDisplay.cpp" "$ag_lib/src/AgOledDisplay.cpp"
 
+# Compile only unless a port is passed. Do not auto-flash whatever is plugged in.
 port="${1:-}"
 if [[ -z "$port" ]]; then
-  shopt -s nullglob
-  ports=(/dev/cu.usbserial* /dev/cu.wchusbserial* /dev/cu.SLAB_USBtoUART* /dev/ttyUSB* /dev/ttyACM*)
-  shopt -u nullglob
-  port="${ports[0]:-}"
-fi
-
-if [[ -z "$port" ]]; then
-  echo "No USB serial port found. Compiling only."
+  echo "No port argument. Compiling only."
   compile_only=1
 else
   compile_only=0
   echo "Flashing via $port"
 fi
 
+# Pass the parent of arduino-master so Arduino-CLI finds bundled
+# PubSubClient / PrintLog. Naming the library AirGradient and pointing
+# --libraries at that folder treats src/ as a library and fails to link.
 "$arduino_cli" --config-file "$config" compile \
   --fqbn esp8266:esp8266:d1_mini \
-  --libraries "$ag_lib" \
+  --libraries "$ag_root" \
   --build-property "compiler.cpp.extra_flags=-DPLANTOWER_AIRGRADIENT_NO_DISPLAY" \
   --build-path "$build" \
   "$sketch"
