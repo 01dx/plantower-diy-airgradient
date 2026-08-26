@@ -1,0 +1,10 @@
+.DS_Store
+.arduino/
+build/
+*.bin.elf
+*.map
+local_wifi_credentials.h
+.env
+.vscode/
+.idea/
+*.log
