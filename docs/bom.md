@@ -10,7 +10,15 @@ You can build this with generic parts. Exact brands are not required.
 | Plantower PMS5003 | Particulate sensor with 2.54 mm breakout / JST adapter | $15–25 |
 | USB 5 V supply | Phone charger is fine after flashing. Sensor needs 5 V. | — |
 | USB data cable | Charge-only cables will not flash | — |
-| Dupont jumper wires | 4 wires: 5 V, GND, TX, RX | $1 |
+| Dupont jumper wires | 4 wires for PMS5003: 5 V, GND, TX, RX. Three more if you add a DHT22. | $1 |
+
+## Optional humidity / temperature
+
+| Part | Notes |
+|---|---|
+| DHT22 / AM2302 | Three-pin modules often marked `+` / `OUT` / `-`. Wire `+` to 3V3, `OUT` to D7, `-` to GND. |
+
+Without this chip the board still uploads nearby temperature and relative humidity from Open-Meteo so AirGradient can apply EPA correction.
 
 ## Useful, not required
 
@@ -23,12 +31,8 @@ You can build this with generic parts. Exact brands are not required.
 ## Do not buy for this firmware
 
 - ESP32 / ESP32-C3 boards (AirGradient Open Air firmware is a different stack)
-- PMS5003T (that module has its own humidity chip; this project uses a plain PMS5003)
+- PMS5003T (that module has its own humidity chip; this project uses a plain PMS5003 plus optional DHT22)
 - OLED, CO2, or TVOC modules (supported by stock AirGradient BASIC, unused here)
-
-## Humidity later
-
-A DHT22 / AM2302 can replace Open-Meteo later. Until then the board fetches nearby temperature and relative humidity from Open-Meteo so AirGradient can apply EPA correction.
 
 ## What we used
 
@@ -36,4 +40,5 @@ This recipe was proven on:
 
 - Generic NodeMCU ESP8266 V3-style USB-C board (CH340)
 - Plantower PMS5003 (batch label `PMS5003-20250530…`)
+- Optional DHT22 / AM2302 on D7
 - USB 5 V from a phone charger after the first flash

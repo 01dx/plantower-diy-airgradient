@@ -37,17 +37,29 @@ Guest and IoT SSIDs often isolate clients. Cloud upload can still work. Try:
 - Swap TX/RX on D5/D6
 - First boot in duty-cycle mode can miss the sensor; wait one cycle or reboot
 
+## Humidity / temperature stay on Open-Meteo
+
+That is expected until a DHT22 is wired, and also if the chip misses a few reads. Check:
+
+- `+` on 3V3, not 5 V
+- `OUT` on D7 (GPIO13)
+- `-` on GND
+- Readings label should say **DHT22 on D7** when the chip answers
+- Serial log: `DHT22 temperature=… humidity=…`
+
+Keep the Network-tab coordinates as fallback so EPA still gets `rhum`.
+
 ## AirGradient shows 400 / unknown device
 
 Register the serial in the dashboard first. The serial is the MAC without colons, not a shorter chip id.
 
 ## AirGradient has PM but humidity is empty
 
-Set latitude/longitude on the Network tab. `0,0` means not set. Open-Meteo needs that point.
+If there is no DHT22, set latitude/longitude on the Network tab. `0,0` means not set. Open-Meteo needs that point.
 
 ## Humidity looks stuck at 100%
 
-Turn off PMS5003T temperature/humidity correction in the dashboard. This hardware is a plain PMS5003.
+Turn off PMS5003T temperature/humidity correction in the dashboard. This hardware is a plain PMS5003, with optional DHT22, not a PMS5003T.
 
 ## EPA numbers look much lower than the local page
 
@@ -55,4 +67,4 @@ Expected. Local page is raw. The public map applies EPA when enabled.
 
 ## Changed my router
 
-If the local page still opens, use Network → save the new Wi-Fi. If it does not, wait for the hotspot or hold FLASH 3 seconds.
+If the local page still opens, use Network → save the new Wi-Fi. If it does not, wait for the hotspot or hold FLASH 3 seconds. You should not need to reflash.

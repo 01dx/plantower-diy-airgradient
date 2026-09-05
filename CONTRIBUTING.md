@@ -1,7 +1,7 @@
 # Contributing
 
 This is a small CC BY-SA 4.0 fork of AirGradient DIY BASIC for a
-NodeMCU + PMS5003 outdoor monitor.
+NodeMCU + PMS5003 outdoor monitor, with an optional DHT22 / AM2302.
 
 ## Ground rules
 

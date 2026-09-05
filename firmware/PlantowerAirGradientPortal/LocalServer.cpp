@@ -64,6 +64,17 @@ void LocalServer::setOpenMeteoLocation(float lat, float lon,
   saveOpenMeteoLocation = saveFn;
 }
 
+void LocalServer::setTempHumSource(const char *source) {
+  tempHumSource = source ? String(source) : String("open-meteo");
+}
+
+String LocalServer::tempHumSourceLabel(void) {
+  if (tempHumSource == "dht22") {
+    return String("DHT22 on D7");
+  }
+  return String("API: Open-Meteo");
+}
+
 String LocalServer::formatApiTemp(float value) {
   if (!utils::isValidTemperature(value)) {
     return String("--");
@@ -235,9 +246,13 @@ void LocalServer::_GET_home(void) {
   body += F("</b></div></div>");
   body += F("<div class='card grid'><div class='stat'><span>Humidity</span><b>");
   body += formatApiRhum(rhum);
-  body += F("</b><span>API: Open-Meteo</span></div><div class='stat'><span>Temperature</span><b>");
+  body += F("</b><span>");
+  body += tempHumSourceLabel();
+  body += F("</span></div><div class='stat'><span>Temperature</span><b>");
   body += formatApiTemp(atmp);
-  body += F("</b><span>API: Open-Meteo</span></div></div>");
+  body += F("</b><span>");
+  body += tempHumSourceLabel();
+  body += F("</span></div></div>");
   body += F("<div class='card grid'><div class='stat'><span>Wi-Fi</span><b>");
   body += currentSsid();
   body += F("</b><span>");
@@ -252,7 +267,11 @@ void LocalServer::_GET_home(void) {
   if (openMeteoLat == 0.0f && openMeteoLon == 0.0f) {
     body += F("<div class='warn'>Set your weather location on the Network tab so humidity can be sent to AirGradient.</div>");
   }
-  body += F("<p class='meta'>PM values are raw Plantower readings. Humidity and temperature come from Open-Meteo for the saved location until an onboard humidity sensor is wired. AirGradient uses that humidity for EPA correction on the public map.</p>");
+  if (tempHumSource == "dht22") {
+    body += F("<p class='meta'>PM values are raw Plantower readings. Humidity and temperature come from the DHT22 on D7. AirGradient uses that humidity for EPA correction on the public map.</p>");
+  } else {
+    body += F("<p class='meta'>PM values are raw Plantower readings. Humidity and temperature currently come from Open-Meteo for the saved location. AirGradient uses that humidity for EPA correction on the public map.</p>");
+  }
   body += F("<script>let n=document.getElementById('nextRead');if(n){let s=parseInt(n.dataset.seconds||'0',10);setInterval(()=>{if(s>0)s--;n.textContent=s+'s';},1000);}</script>");
   sendHtml(pageShell("readings", body));
 }
@@ -373,10 +392,11 @@ void LocalServer::_GET_help(void) {
   body += F("<p>You can also hold the NodeMCU <b>FLASH</b> button for 3 seconds to forget Wi-Fi and open the hotspot.</p></div>");
   body += F("<div class='card'><h2 style='margin:0 0 8px;font-size:18px'>Wiring</h2>");
   body += F("<p>PMS5003 VCC to 5V / VBUS. GND to GND. TX to D5 (GPIO14). RX to D6 (GPIO12).</p>");
+  body += F("<p>Optional DHT22 / AM2302: <code>+</code> to 3V3, <code>OUT</code> to D7 (GPIO13), <code>-</code> to GND. Do not power the DHT22 from 5V.</p>");
   body += F("<p class='meta'>USB is only for power and flashing. The setup page is always over Wi-Fi, not USB.</p></div>");
   body += F("<div class='card'><h2 style='margin:0 0 8px;font-size:18px'>Humidity and temperature</h2>");
-  body += F("<p>There is no onboard humidity chip yet. The board asks Open-Meteo for nearby temperature and relative humidity, then uploads those as <code>atmp</code> and <code>rhum</code> so AirGradient can apply EPA correction.</p>");
-  body += F("<p>Set the location on the Network tab. Find coordinates at <a href='https://www.openstreetmap.org/'>openstreetmap.org</a> or from your phone. Use the outdoor sensor position, not a city-centre default if you live elsewhere.</p></div>");
+  body += F("<p>If a DHT22 / AM2302 is wired to D7, that is the local humidity and temperature source. If the chip is missing or misses a few reads, the board falls back to Open-Meteo for the saved location and still uploads <code>atmp</code> and <code>rhum</code> so AirGradient can apply EPA correction.</p>");
+  body += F("<p>Keep Open-Meteo coordinates on the Network tab as backup, even if a DHT22 is fitted. Find them at <a href='https://www.openstreetmap.org/'>openstreetmap.org</a> or from your phone.</p></div>");
   body += F("<div class='card'><h2 style='margin:0 0 8px;font-size:18px'>What the numbers mean</h2>");
   body += F("<p>PM2.5 is the main outdoor smoke and haze number. Lower is cleaner. This page shows raw Plantower values. Map, sharing, and corrections stay in AirGradient.</p></div>");
   sendHtml(pageShell("help", body));
@@ -420,7 +440,7 @@ void LocalServer::_GET_plantower_settings(void) {
       data += "\"rhum\":null,";
     }
   }
-  data += "\"tempHumSource\":\"open-meteo\",";
+  data += "\"tempHumSource\":\"" + tempHumSource + "\",";
   data += "\"openMeteoLat\":" + String(openMeteoLat, 4) + ",";
   data += "\"openMeteoLon\":" + String(openMeteoLon, 4) + ",";
   data += "\"lastReadingAgeSec\":" + String(ageSec) + ",";

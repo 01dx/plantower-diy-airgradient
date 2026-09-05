@@ -44,7 +44,7 @@ Some guest / IoT networks isolate clients, so a laptop may not open the local pa
 
 ## 5. Set the weather location
 
-Until a humidity chip is wired, the board asks [Open-Meteo](https://open-meteo.com/) for nearby temperature and relative humidity.
+The board can use a DHT22 / AM2302 on D7 for temperature and relative humidity. If that chip is not wired, or it misses a few reads, the board asks [Open-Meteo](https://open-meteo.com/) instead.
 
 On **Network**, enter latitude and longitude for the outdoor sensor. Four decimal places is enough. Get them from:
 
@@ -52,9 +52,11 @@ On **Network**, enter latitude and longitude for the outdoor sensor. Four decima
 - [OpenStreetMap](https://www.openstreetmap.org/) (right-click → show address)
 - Google Maps (right-click the pin)
 
-Save. The board stores the point and fetches weather about every 10 minutes. That humidity is uploaded to AirGradient as `rhum` so EPA correction can run.
+Save. Keep this point even if a DHT22 is fitted — it is the fallback. The board stores the point and fetches weather about every 10 minutes when needed. That humidity is uploaded to AirGradient as `rhum` so EPA correction can run.
 
-Do not leave 0,0. That means "not set", and humidity will not be sent.
+Do not leave 0,0. That means "not set", and Open-Meteo will not be used.
+
+Readings shows the live source as **DHT22 on D7** or **API: Open-Meteo**.
 
 ## 6. Register on AirGradient
 

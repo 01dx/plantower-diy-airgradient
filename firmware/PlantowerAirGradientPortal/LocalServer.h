@@ -22,9 +22,11 @@ private:
   uint32_t plantowerNextReadingMs = 0;
   float openMeteoLat = 0;
   float openMeteoLon = 0;
+  String tempHumSource = "open-meteo";
   void (*saveOpenMeteoLocation)(float, float) = nullptr;
   String formatApiTemp(float value);
   String formatApiRhum(float value);
+  String tempHumSourceLabel(void);
 
   String pageShell(const char *activeTab, const String &body);
   String formatPmValue(int value, bool particleCount = false);
@@ -46,6 +48,7 @@ public:
                                  uint32_t nextReadingMs);
   void setOpenMeteoLocation(float lat, float lon,
                             void (*saveFn)(float, float));
+  void setTempHumSource(const char *source);
   void _handle(void);
   void _GET_config(void);
   void _PUT_config(void);

@@ -3,6 +3,10 @@
 `PlantowerAirGradientPortal` is AirGradient DIY BASIC, trimmed to a
 NodeMCU + PMS5003, with a local Readings / Network / Help site.
 
+Humidity and temperature come from an optional DHT22 / AM2302 on D7
+(GPIO13). If that chip is missing or fails, the board falls back to
+Open-Meteo for the location saved on the Network tab.
+
 `library-patches/` overlays five files onto AirGradient Arduino **3.7.0**:
 
 | File | Why |

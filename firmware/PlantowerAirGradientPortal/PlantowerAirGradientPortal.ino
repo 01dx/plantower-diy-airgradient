@@ -3,9 +3,10 @@ This is the code for the AirGradient DIY BASIC Air Quality Monitor with an D1
 ESP8266 Microcontroller.
 
 Plantower project note: this portal firmware is for NodeMCU ESP8266 +
-PMS5003 only. CO2 and gas sensors are disabled. Humidity and temperature
-come from Open-Meteo until an onboard sensor is wired. Wi-Fi is entered
-in the web UI, never compiled into the firmware.
+PMS5003, with an optional DHT22/AM2302 on D7. CO2 and gas sensors are
+disabled. Humidity and temperature come from the DHT22 when it is wired
+and answering, with Open-Meteo as fallback. Wi-Fi is entered in the web
+UI, never compiled into the firmware.
 
 It is an air quality monitor for PM2.5, CO2, Temperature and Humidity with a
 small display and can send data over Wifi.
@@ -65,6 +66,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define DISPLAY_DELAY_SHOW_CONTENT_MS 2000            /** ms */
 #define PLANTOWER_FLASH_BUTTON_PIN 0                  /** NodeMCU FLASH / GPIO0 */
 #define PLANTOWER_FLASH_HOLD_MS 3000
+#define DHT22_PIN 13                                  /** NodeMCU D7 / GPIO13 */
 #define PLANTOWER_WIFI_FALLBACK_MS 180000
 #ifndef PLANTOWER_OPEN_METEO_LAT
 #define PLANTOWER_OPEN_METEO_LAT 0.0f
@@ -107,6 +109,8 @@ static uint32_t pmsDutyLastRead = 0;
 static uint32_t pmsRetryAt = 0;
 static uint32_t wifiLostSince = 0;
 static uint32_t flashHeldSince = 0;
+static uint32_t lastOpenMeteoAt = 0;
+static uint8_t dhtFailCount = 0;
 static float openMeteoLat = PLANTOWER_OPEN_METEO_LAT;
 static float openMeteoLon = PLANTOWER_OPEN_METEO_LON;
 
@@ -141,6 +145,8 @@ static void handlePlantowerSensor(void);
 static void forgetWifiAndReboot(const char *reason);
 static void handleFlashButton(void);
 static void handleWifiFallback(void);
+static bool waitPinState(int pin, int state, uint32_t timeoutUs, uint32_t *elapsedUs);
+static bool dht22Read(float &temperatureC, float &humidityRh);
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, oledDisplaySchedule);
 AgSchedule configSchedule(SERVER_CONFIG_SYNC_INTERVAL,
@@ -148,7 +154,7 @@ AgSchedule configSchedule(SERVER_CONFIG_SYNC_INTERVAL,
 AgSchedule agApiPostSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
 AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, updatePm);
-AgSchedule tempHumSchedule(PLANTOWER_OPEN_METEO_UPDATE_INTERVAL, tempHumUpdate);
+AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumUpdate);
 AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, updateTvoc);
 AgSchedule watchdogFeedSchedule(60000, wdgFeedUpdate);
 AgSchedule mqttSchedule(MQTT_SYNC_INTERVAL, mqttHandle);
@@ -523,9 +529,11 @@ static void boardInit(void) {
   //   dispSensorNotFound("SGP41");
   // }
 
-  /** No onboard SHT. Keep the SHT flag so AirGradient still accepts rhum/atmp
-   *  from Open-Meteo until the DHT22 / AM2302 is wired. */
+  /** Optional DHT22 / AM2302 on D7. Keep hasSensorSHT so AirGradient accepts
+   *  atmp/rhum. Open-Meteo is the fallback if the chip is missing or fails. */
   configuration.hasSensorSHT = true;
+  pinMode(DHT22_PIN, INPUT_PULLUP);
+  Serial.println("Optional DHT22 / AM2302 on D7 / GPIO13 (Open-Meteo fallback)");
 
   /** Plantower build: no S8 CO2 sensor installed. */
   configuration.hasSensorS8 = false;
@@ -872,16 +880,105 @@ static bool fetchOpenMeteo(void) {
   return true;
 }
 
-static void tempHumUpdate(void) {
-  if (!fetchOpenMeteo()) {
-    if (!utils::isValidTemperature(
-            measurements.getFloat(Measurements::Temperature)) ||
-        !utils::isValidHumidity(
-            measurements.getFloat(Measurements::Humidity))) {
-      measurements.update(Measurements::Temperature,
-                          utils::getInvalidTemperature());
-      measurements.update(Measurements::Humidity, utils::getInvalidHumidity());
+static bool waitPinState(int pin, int state, uint32_t timeoutUs, uint32_t *elapsedUs) {
+  uint32_t started = micros();
+  while (digitalRead(pin) != state) {
+    if ((uint32_t)(micros() - started) > timeoutUs) {
+      return false;
     }
+  }
+  if (elapsedUs != nullptr) {
+    *elapsedUs = (uint32_t)(micros() - started);
+  }
+  return true;
+}
+
+static bool dht22Read(float &temperatureC, float &humidityRh) {
+  uint8_t data[5] = {0, 0, 0, 0, 0};
+
+  pinMode(DHT22_PIN, OUTPUT);
+  digitalWrite(DHT22_PIN, LOW);
+  delay(2);
+  digitalWrite(DHT22_PIN, HIGH);
+  delayMicroseconds(30);
+  pinMode(DHT22_PIN, INPUT_PULLUP);
+
+  noInterrupts();
+  if (!waitPinState(DHT22_PIN, LOW, 90, nullptr) ||
+      !waitPinState(DHT22_PIN, HIGH, 90, nullptr) ||
+      !waitPinState(DHT22_PIN, LOW, 90, nullptr)) {
+    interrupts();
+    pinMode(DHT22_PIN, INPUT_PULLUP);
+    return false;
+  }
+
+  for (int i = 0; i < 40; i++) {
+    uint32_t highUs = 0;
+    if (!waitPinState(DHT22_PIN, HIGH, 70, nullptr) ||
+        !waitPinState(DHT22_PIN, LOW, 90, &highUs)) {
+      interrupts();
+      pinMode(DHT22_PIN, INPUT_PULLUP);
+      return false;
+    }
+    data[i / 8] <<= 1;
+    if (highUs > 40) {
+      data[i / 8] |= 1;
+    }
+  }
+  interrupts();
+  pinMode(DHT22_PIN, INPUT_PULLUP);
+
+  uint8_t checksum = (uint8_t)(data[0] + data[1] + data[2] + data[3]);
+  if (checksum != data[4]) {
+    return false;
+  }
+
+  int16_t humidityRaw = (int16_t)((data[0] << 8) | data[1]);
+  int16_t temperatureRaw = (int16_t)((data[2] << 8) | data[3]);
+  humidityRh = humidityRaw * 0.1f;
+  if (temperatureRaw & 0x8000) {
+    temperatureRaw &= 0x7FFF;
+    temperatureC = -temperatureRaw * 0.1f;
+  } else {
+    temperatureC = temperatureRaw * 0.1f;
+  }
+
+  return utils::isValidHumidity(humidityRh) &&
+         utils::isValidTemperature(temperatureC);
+}
+
+static void tempHumUpdate(void) {
+  float temp = 0;
+  float rhum = 0;
+  if (dht22Read(temp, rhum)) {
+    dhtFailCount = 0;
+    measurements.update(Measurements::Temperature, temp);
+    measurements.update(Measurements::Humidity, rhum);
+    localServer.setTempHumSource("dht22");
+    Serial.printf("DHT22 temperature=%.1f C humidity=%.1f %%\n", temp, rhum);
+    return;
+  }
+
+  dhtFailCount++;
+  Serial.printf("DHT22 read failed (%u), trying Open-Meteo fallback\n", dhtFailCount);
+  localServer.setTempHumSource("open-meteo");
+
+  bool due = (lastOpenMeteoAt == 0) ||
+             ((uint32_t)(millis() - lastOpenMeteoAt) >=
+              PLANTOWER_OPEN_METEO_UPDATE_INTERVAL);
+  if (due && fetchOpenMeteo()) {
+    lastOpenMeteoAt = millis();
+    return;
+  }
+
+  if (dhtFailCount >= 3 &&
+      (!utils::isValidTemperature(
+           measurements.getFloat(Measurements::Temperature)) ||
+       !utils::isValidHumidity(
+           measurements.getFloat(Measurements::Humidity)))) {
+    measurements.update(Measurements::Temperature,
+                        utils::getInvalidTemperature());
+    measurements.update(Measurements::Humidity, utils::getInvalidHumidity());
   }
 }
 

@@ -1,6 +1,6 @@
 # AirGradient dashboard, calibration, and sharing
 
-The board uploads raw PMS5003 readings plus Open-Meteo temperature (`atmp`) and humidity (`rhum`) to AirGradient. Corrections, the public map, and OpenAQ sharing are configured in the dashboard, not in this firmware.
+The board uploads raw PMS5003 readings plus temperature (`atmp`) and humidity (`rhum`) to AirGradient. Those last two come from a DHT22 / AM2302 on D7 when it is answering, otherwise from Open-Meteo for the saved location. Corrections, the public map, and OpenAQ sharing are configured in the dashboard, not in this firmware.
 
 ## Register the monitor
 
@@ -26,10 +26,10 @@ A `400` before registration usually means AirGradient does not know the serial y
 | `pm01`, `pm02`, `pm10` | PMS5003 raw µg/m³ |
 | `pm003Count` | PMS5003 particle count |
 | `wifi` | RSSI in dBm |
-| `atmp`, `rhum` | Open-Meteo for the saved lat/lon, until a DHT22 is fitted |
+| `atmp`, `rhum` | DHT22 on D7 when it reads; otherwise Open-Meteo for the saved lat/lon |
 | `firmware` | AirGradient firmware string |
 
-The local Readings page also shows those raw PM values. It does not replace the AirGradient map.
+The local Readings page also shows those raw PM values and labels the humidity source as **DHT22 on D7** or **API: Open-Meteo**. It does not replace the AirGradient map.
 
 ## PM2.5 calibration
 
@@ -53,7 +53,7 @@ This SLR can be on even before humidity is available.
 
 This **is** the humidity correction in the AirGradient panel (`useEpa2021`). It uses uploaded `rhum` to adjust **PM2.5**, not to rewrite the humidity number.
 
-Enable it once the board is sending real `rhum` (Open-Meteo location saved, or a future onboard sensor). Until then, leave EPA off so AirGradient does not invent an indoor 70% RH.
+Enable it once the board is sending real `rhum` (DHT22 answering, or Open-Meteo location saved). Until then, leave EPA off so AirGradient does not invent an indoor 70% RH.
 
 In humid climates the EPA step often lowers reported PM2.5 a lot. Example at 70% RH:
 
@@ -64,7 +64,7 @@ In humid climates the EPA step often lowers reported PM2.5 a lot. Example at 70%
 
 This is a **separate** dashboard setting. It tries to correct the temperature and humidity values themselves, as if they came from a Plantower **PMS5003T** (a different sensor with its own humidity chip).
 
-This build does not have that chip. Humidity comes from Open-Meteo. Set T/H correction to **none**. Do **not** enable `ag_pms5003t_2024`. Applying that formula to weather-API RH can clamp humidity to 100%, and then EPA uses the wrong RH.
+This build does not have that chip. Humidity comes from a DHT22 or Open-Meteo. Set T/H correction to **none**. Do **not** enable `ag_pms5003t_2024`. Applying that formula to weather-API or DHT22 RH can clamp humidity to 100%, and then EPA uses the wrong RH.
 
 ## Where corrected values appear
 
@@ -90,4 +90,4 @@ https://api.airgradient.com/public/api/v1/world/locations/<location-id>/measures
 
 ## Local vs cloud
 
-Keep using AirGradient for calibration, map, and sharing. The board's Network tab is only Wi-Fi, Open-Meteo location, and how often the Plantower runs.
+Keep using AirGradient for calibration, map, and sharing. The board's Network tab is only Wi-Fi, Open-Meteo location, and how often the Plantower runs. Changing home Wi-Fi later is done there, not by reflashing.

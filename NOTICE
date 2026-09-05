@@ -1,9 +1,10 @@
 This firmware is based on AirGradient Arduino library 3.7.0
 (https://github.com/airgradienthq/arduino), licensed CC BY-SA 4.0.
 
-Humidity and temperature without an onboard chip come from the
-Open-Meteo forecast API (https://open-meteo.com/).
+Humidity and temperature come from an optional DHT22 / AM2302 when
+wired, otherwise from the Open-Meteo forecast API
+(https://open-meteo.com/).
 
 The local web portal, Plantower duty-cycle settings, Open-Meteo
-location picker, and ESP8266 NodeMCU + PMS5003 packaging are
-additions for this DIY project.
+location picker, optional DHT22 path, and ESP8266 NodeMCU + PMS5003
+packaging are additions for this DIY project.

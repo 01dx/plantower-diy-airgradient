@@ -50,7 +50,7 @@ Compile flags used for the public image:
 -DPLANTOWER_AIRGRADIENT_NO_DISPLAY
 ```
 
-There is **no** Wi-Fi password and **no** device-id override in the public binary. Each board uses its own MAC-derived AirGradient serial.
+There is **no** Wi-Fi password and **no** device-id override in the public binary. Each board uses its own MAC-derived AirGradient serial. Optional DHT22 support on D7 is compiled in; no extra flag is required. Open-Meteo stays the fallback until that chip answers.
 
 ## Mac USB quirk
 
