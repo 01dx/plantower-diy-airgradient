@@ -7,6 +7,11 @@ Humidity and temperature come from an optional DHT22 / AM2302 on D7
 (GPIO13). If that chip is missing or fails, the board falls back to
 Open-Meteo for the location saved on the Network tab.
 
+Readings shows raw Plantower PM2.5 as the large number. The smaller
+line under it is the AirGradient `PMS5003_20250530` particle-count
+scale plus EPA 2021 humidity correction, computed from values already
+on the board. No extra network call.
+
 `library-patches/` overlays five files onto AirGradient Arduino **3.7.0**:
 
 | File | Why |

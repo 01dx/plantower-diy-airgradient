@@ -8,7 +8,7 @@ This is a small CC BY-SA 4.0 derivative of [AirGradient DIY BASIC](https://githu
 
 - Prebuilt firmware in [`releases/PlantowerAirGradientPortal.bin`](releases/PlantowerAirGradientPortal.bin)
 - Phone hotspot setup (`airgradient-<serial>` / `cleanair`) — Wi-Fi is **not** compiled in
-- Local site that opens on **Readings**
+- Local site that opens on **Readings** (raw PM2.5, with a smaller humidity-compensated line underneath)
 - Network tab to change Wi-Fi later without reflashing
 - Optional DHT22 / AM2302 on D7 for local humidity and temperature
 - Open-Meteo humidity/temperature fallback so EPA correction still has `rhum` if the chip is missing or misses a read
@@ -31,7 +31,7 @@ DHT22    --3V3/D7/GND----/           \-> Open-Meteo (RH / temp fallback)
 
 | URL | What |
 |---|---|
-| `/` | Readings (default) |
+| `/` | Readings (default). Large PM2.5 is raw; the smaller line is PMS5003_20250530 then EPA 2021 |
 | `/network` | Wi-Fi, weather location, intervals |
 | `/help` | Wiring and recovery |
 | `/plantower/settings` | JSON |

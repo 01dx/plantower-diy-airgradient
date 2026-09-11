@@ -1,6 +1,11 @@
 #include "LocalServer.h"
 #include <ESP8266WiFi.h>
 
+// AirGradient dashboard preset PMS5003_20250530: PM0.3-count SLR, then EPA 2021.
+// Uses the latest values already on the board. No extra network calls.
+static const float kPms5003_20250530Scale = 0.02411f;
+static const float kPms5003_20250530Offset = 0.0f;
+
 static void appendOption(String &html, int value, int selectedValue,
                          const char *label) {
   html += "<option value='";
@@ -91,6 +96,21 @@ String LocalServer::formatApiRhum(float value) {
   return String(value, 0) + "%";
 }
 
+bool LocalServer::correctedPm25(float &out) {
+  int pm25 = measure.get(Measurements::PM25);
+  int pm003 = measure.get(Measurements::PM03_PC);
+  float humidity = measure.getFloat(Measurements::Humidity);
+  if (!utils::isValidPm(pm25) || !utils::isValidPm03Count(pm003) ||
+      !utils::isValidHumidity(humidity)) {
+    return false;
+  }
+  float slr = ag->pms5003.slrCorrection((float)pm25, (float)pm003,
+                                        kPms5003_20250530Scale,
+                                        kPms5003_20250530Offset);
+  out = ag->pms5003.compensate(slr, humidity);
+  return true;
+}
+
 void LocalServer::_handle(void) { server.handleClient(); }
 
 void LocalServer::_GET_config(void) {
@@ -137,7 +157,11 @@ String LocalServer::wifiSignalLabel(int rssi) {
 }
 
 String LocalServer::formatPmValue(int value, bool particleCount) {
-  if (!utils::isValidPm(value)) {
+  if (particleCount) {
+    if (!utils::isValidPm03Count(value)) {
+      return String("--");
+    }
+  } else if (!utils::isValidPm(value)) {
     return String("--");
   }
   String formatted = String(value);
@@ -181,6 +205,7 @@ String LocalServer::pageShell(const char *activeTab, const String &body) {
   html += F("main{max-width:640px;margin:0 auto;padding:16px}");
   html += F(".card{background:#fff;border:1px solid #d5e4e0;border-radius:14px;padding:16px;margin:0 0 14px}");
   html += F(".hero{text-align:center;padding:22px 12px}.hero b{display:block;font-size:48px;line-height:1.1;margin:6px 0}");
+  html += F(".hero .epa{display:block;margin-top:10px;font-size:14px;color:#5b7278;font-weight:500}.hero .epa strong{font-weight:700;color:#173038}");
   html += F(".grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}");
   html += F(".stat span{display:block;color:#5b7278;font-size:13px}.stat b{font-size:20px}");
   html += F("label{display:block;font-weight:650;margin:16px 0 6px}");
@@ -228,7 +253,18 @@ void LocalServer::_GET_home(void) {
   String body;
   body += F("<div class='card hero'><span>PM2.5</span><b>");
   body += formatPmValue(pm25);
-  body += F("</b><span class='meta'>Tiny particles that affect breathing</span></div>");
+  body += F("</b><span class='meta'>Tiny particles that affect breathing</span>");
+  body += F("<span class='epa'>Humidity compensated: <strong>");
+  {
+    float corrected = 0;
+    if (correctedPm25(corrected)) {
+      body += String(corrected, 1);
+      body += F(" ug/m3");
+    } else {
+      body += F("--");
+    }
+  }
+  body += F("</strong></span></div>");
   body += F("<div class='card grid'><div class='stat'><span>PM1</span><b>");
   body += formatPmValue(pm01);
   body += F("</b></div><div class='stat'><span>PM10</span><b>");
@@ -268,9 +304,9 @@ void LocalServer::_GET_home(void) {
     body += F("<div class='warn'>Set your weather location on the Network tab so humidity can be sent to AirGradient.</div>");
   }
   if (tempHumSource == "dht22") {
-    body += F("<p class='meta'>PM values are raw Plantower readings. Humidity and temperature come from the DHT22 on D7. AirGradient uses that humidity for EPA correction on the public map.</p>");
+    body += F("<p class='meta'>The large PM2.5 number is the raw Plantower reading. The smaller line uses the latest humidity and particle count already on the board (PMS5003_20250530 then EPA 2021), the same pair as the AirGradient map. Humidity and temperature come from the DHT22 on D7.</p>");
   } else {
-    body += F("<p class='meta'>PM values are raw Plantower readings. Humidity and temperature currently come from Open-Meteo for the saved location. AirGradient uses that humidity for EPA correction on the public map.</p>");
+    body += F("<p class='meta'>The large PM2.5 number is the raw Plantower reading. The smaller line uses the latest humidity and particle count already on the board (PMS5003_20250530 then EPA 2021), the same pair as the AirGradient map. Humidity and temperature currently come from Open-Meteo for the saved location.</p>");
   }
   body += F("<script>let n=document.getElementById('nextRead');if(n){let s=parseInt(n.dataset.seconds||'0',10);setInterval(()=>{if(s>0)s--;n.textContent=s+'s';},1000);}</script>");
   sendHtml(pageShell("readings", body));
@@ -398,7 +434,7 @@ void LocalServer::_GET_help(void) {
   body += F("<p>If a DHT22 / AM2302 is wired to D7, that is the local humidity and temperature source. If the chip is missing or misses a few reads, the board falls back to Open-Meteo for the saved location and still uploads <code>atmp</code> and <code>rhum</code> so AirGradient can apply EPA correction.</p>");
   body += F("<p>Keep Open-Meteo coordinates on the Network tab as backup, even if a DHT22 is fitted. Find them at <a href='https://www.openstreetmap.org/'>openstreetmap.org</a> or from your phone.</p></div>");
   body += F("<div class='card'><h2 style='margin:0 0 8px;font-size:18px'>What the numbers mean</h2>");
-  body += F("<p>PM2.5 is the main outdoor smoke and haze number. Lower is cleaner. This page shows raw Plantower values. Map, sharing, and corrections stay in AirGradient.</p></div>");
+  body += F("<p>The large PM2.5 number is the raw Plantower reading. The smaller line is PMS5003_20250530 particle-count scaling plus EPA 2021 humidity correction, using the latest values already on the board. Map and sharing still live in AirGradient.</p></div>");
   sendHtml(pageShell("help", body));
 }
 
@@ -424,6 +460,14 @@ void LocalServer::_GET_plantower_settings(void) {
   data += "\"wifiSignal\":\"" + wifiSignalLabel(rssi) + "\",";
   data += "\"pm01\":" + String(measure.get(Measurements::PM01)) + ",";
   data += "\"pm25\":" + String(measure.get(Measurements::PM25)) + ",";
+  {
+    float corrected = 0;
+    if (correctedPm25(corrected)) {
+      data += "\"pm25Corrected\":" + String(corrected, 1) + ",";
+    } else {
+      data += "\"pm25Corrected\":null,";
+    }
+  }
   data += "\"pm10\":" + String(measure.get(Measurements::PM10)) + ",";
   data += "\"pm003Count\":" + String(measure.get(Measurements::PM03_PC)) + ",";
   {

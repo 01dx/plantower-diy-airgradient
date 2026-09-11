@@ -29,7 +29,7 @@ A `400` before registration usually means AirGradient does not know the serial y
 | `atmp`, `rhum` | DHT22 on D7 when it reads; otherwise Open-Meteo for the saved lat/lon |
 | `firmware` | AirGradient firmware string |
 
-The local Readings page also shows those raw PM values and labels the humidity source as **DHT22 on D7** or **API: Open-Meteo**. It does not replace the AirGradient map.
+The local Readings page shows raw PM values as the large numbers, labels the humidity source as **DHT22 on D7** or **API: Open-Meteo**, and puts a smaller humidity-compensated PM2.5 under the hero reading. That smaller line uses the latest humidity and PM0.3 count already on the board (`PMS5003_20250530` then EPA 2021). It does not replace the AirGradient map.
 
 ## PM2.5 calibration
 
@@ -74,7 +74,7 @@ AirGradient's own surfaces do not all show the same number:
 |---|---|
 | Device Current Data / world API | Raw upload (`pm02`) |
 | AirGradient Map | EPA-corrected when EPA is enabled |
-| This board's local page | Raw PMS5003 |
+| This board's local page | Large PM2.5 is raw. Smaller line is PMS5003_20250530 then EPA 2021 |
 
 That split is expected. Compare local raw vs the map after EPA is on.
 

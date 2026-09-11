@@ -10,8 +10,10 @@ NodeMCU + PMS5003 outdoor monitor, with an optional DHT22 / AM2302.
 - Do not add a 24/7 open setup hotspot.
 - ESP8266 RAM is tight. Prefer server-rendered HTML over a heavy
   front-end.
-- Calibration, map, and public sharing stay in AirGradient. Do not
-  duplicate that in the local portal.
+- Map, sharing, and dashboard calibration settings stay in AirGradient.
+  The local Readings page may preview the same PMS5003_20250530 + EPA
+  2021 pair from values already on the board; do not add extra API
+  calls or bake in a location.
 - Credit AirGradient when you redistribute.
 
 ## Build

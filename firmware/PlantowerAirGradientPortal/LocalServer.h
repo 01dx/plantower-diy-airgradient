@@ -27,6 +27,7 @@ private:
   String formatApiTemp(float value);
   String formatApiRhum(float value);
   String tempHumSourceLabel(void);
+  bool correctedPm25(float &out);
 
   String pageShell(const char *activeTab, const String &body);
   String formatPmValue(int value, bool particleCount = false);

@@ -61,9 +61,11 @@ If there is no DHT22, set latitude/longitude on the Network tab. `0,0` means not
 
 Turn off PMS5003T temperature/humidity correction in the dashboard. This hardware is a plain PMS5003, with optional DHT22, not a PMS5003T.
 
-## EPA numbers look much lower than the local page
+## EPA numbers look much lower than the large local PM2.5
 
-Expected. Local page is raw. The public map applies EPA when enabled.
+Expected. The large local number is raw Plantower. The smaller **Humidity compensated** line on Readings uses the same PMS5003_20250530 then EPA 2021 pair as the AirGradient map, from the latest values already on the board.
+
+If that smaller line is `--` while PM2.5 and humidity are present, wait for the next Plantower cycle so PM0.3 count is valid, then refresh.
 
 ## Changed my router
 
